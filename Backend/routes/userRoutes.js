@@ -66,6 +66,9 @@ const handleUploadError = (error, req, res, next) => {
   next();
 };
 
+// Public face recognition route (no auth required)
+router.get('/face-descriptors', userController.getFaceDescriptors);
+
 // Protect all routes with token verification
 router.use(auth.verifyToken);
 
@@ -113,6 +116,9 @@ router.get('/dashboard/summary',
   auth.isMahasiswa,
   userController.getDashboardSummary
 );
+
+// Face enrollment
+router.post('/enroll-face', auth.isMahasiswa, userController.enrollFace);
 
 // Get recent activities
 router.get('/recent-activities', auth.verifyToken, userController.getRecentActivities);

@@ -16,7 +16,7 @@ const userController = {
         query = `SELECT u.email, u.photo_profile, u.role, 
                 m.id, m.nim, m.nama, m.institusi, m.jenis_kelamin, 
                 m.alamat, m.no_telepon, m.tanggal_mulai, m.tanggal_selesai,
-                m.status, m.sisa_hari
+                m.status, m.sisa_hari, m.face_descriptor
          FROM users u
          LEFT JOIN mahasiswa m ON u.id = m.user_id
          WHERE u.id = ?`;
@@ -46,6 +46,10 @@ const userController = {
 
       // For mahasiswa, include additional statistics
       if (userRole === "mahasiswa") {
+        // Compute has_face_enrolled and remove raw descriptor from response
+        user[0].has_face_enrolled = user[0].face_descriptor !== null;
+        delete user[0].face_descriptor;
+
         const [statistik] = await db.execute(
           `SELECT
            COUNT(*) as total_kehadiran,
@@ -447,6 +451,87 @@ const userController = {
       res.status(500).json({
         success: false,
         message: "Terjadi kesalahan saat mengambil data dashboard",
+      });
+    }
+  },
+
+  // Enroll face descriptor for mahasiswa
+  enrollFace: async (req, res) => {
+    try {
+      const mahasiswaId = req.user.mahasiswa_id;
+      const { face_descriptor } = req.body;
+
+      // Validation
+      if (!face_descriptor) {
+        return res.status(400).json({
+          success: false,
+          message: 'face_descriptor wajib diisi',
+        });
+      }
+
+      if (!Array.isArray(face_descriptor)) {
+        return res.status(400).json({
+          success: false,
+          message: 'face_descriptor harus berupa array',
+        });
+      }
+
+      if (face_descriptor.length !== 128) {
+        return res.status(400).json({
+          success: false,
+          message: 'face_descriptor harus memiliki panjang 128',
+        });
+      }
+
+      if (!face_descriptor.every((el) => typeof el === 'number')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Semua elemen face_descriptor harus berupa number',
+        });
+      }
+
+      await db.execute(
+        'UPDATE mahasiswa SET face_descriptor = ? WHERE id = ?',
+        [JSON.stringify(face_descriptor), mahasiswaId]
+      );
+
+      return res.json({
+        success: true,
+        message: 'Wajah berhasil didaftarkan',
+        data: { has_face_enrolled: true },
+      });
+    } catch (error) {
+      console.error('Enroll face error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Terjadi kesalahan saat mendaftarkan wajah',
+      });
+    }
+  },
+
+  // Get all face descriptors (public, for frontend matching)
+  getFaceDescriptors: async (req, res) => {
+    try {
+      const [rows] = await db.execute(
+        `SELECT id AS mahasiswa_id, face_descriptor
+         FROM mahasiswa
+         WHERE face_descriptor IS NOT NULL AND status = 'aktif'`
+      );
+
+      const data = rows.map((r) => ({
+        mahasiswa_id: r.mahasiswa_id,
+        face_descriptor: JSON.parse(r.face_descriptor),
+      }));
+
+      return res.json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error('Get face descriptors error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Terjadi kesalahan saat mengambil data wajah',
       });
     }
   },
