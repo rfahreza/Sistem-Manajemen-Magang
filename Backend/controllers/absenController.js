@@ -813,9 +813,9 @@ const absenController = {
         });
       }
   
-      // Get admin info
+      // Get admin info with paraf
       const [adminInfo] = await connection.execute(
-        "SELECT nama FROM admin WHERE id = ?",
+        "SELECT nama, paraf_image FROM admin WHERE id = ?",
         [adminId]
       );
       const adminName = adminInfo[0]?.nama || "Admin";
@@ -841,54 +841,54 @@ const absenController = {
   
       doc.pipe(res);
   
-      // Header with adjusted positioning
+      // Header with logos
       const createHeader = () => {
-        const logoPath = path.join(__dirname, "../uploads/assets");
-        const semenPadangLogo = path.join(logoPath, "semen-padang-logo.png");
-        const sigLogo = path.join(logoPath, "sig-logo.png");
+        const logoPath = path.join(__dirname, '../uploads/assets');
+        const semenPadangLogo = path.join(logoPath, 'semen-padang-logo.png');
+        const sigLogo = path.join(logoPath, 'sig-logo.png');
   
         if (fs.existsSync(semenPadangLogo)) {
-          doc.image(semenPadangLogo, 40, 30, { width: 45 });
+          doc.image(semenPadangLogo, 60, 40, { width: 60 });
         }
-  
+        
         if (fs.existsSync(sigLogo)) {
-          doc.image(sigLogo, 510, 30, { width: 40 });
+          doc.image(sigLogo, 495, 40, { width: 60 });
         }
   
-        doc
-          .font("Helvetica-Bold")
-          .fontSize(16)
-          .text("SISTEM MONITORING MAGANG", { align: "center" })
-          .fontSize(14)
-          .text("Laporan Absensi Magang", { align: "center" })
-          .moveDown(2);
+        doc.font('Helvetica-Bold')
+           .fontSize(16)
+           .text('SISTEM MONITORING MAGANG', 160, 50, { align: 'center', width: 300 })
+           .fontSize(14)
+           .text('Laporan Absensi Magang', 160, 75, { align: 'center', width: 300 });
   
-        doc
-          .moveTo(40, 90)
-          .lineTo(552, 90)
-          .lineWidth(0.5)
-          .strokeColor("#e0e0e0")
-          .stroke();
+        doc.moveTo(60, 110)
+           .lineTo(535, 110)
+           .lineWidth(0.5)
+           .strokeColor('#e0e0e0')
+           .stroke();
       };
   
       createHeader();
   
-      // Adjusted metadata positioning
+      createHeader();
+  
+      // Metadata
       doc
         .font("Helvetica")
         .fontSize(10)
         .fillColor("#444444")
+        .moveDown(2.5)
         .text(`Admin: ${adminName}`, 40)
         .text(`Tanggal Cetak: ${new Date().toLocaleDateString("id-ID")}`)
         .text(`Total Data: ${data.length} record`)
         .moveDown(0.5);
   
-      // Adjusted table dimensions
+      // Table dimensions
       const startX = 40;
       const colWidths = [25, 65, 85, 60, 60, 60, 50, 55, 55]; // Total = 515
       let y = doc.y + 5;
   
-      // Draw table header
+      // Table headers
       const tableHeaders = [
         "No",
         "NIM",
@@ -901,53 +901,40 @@ const absenController = {
         "Lokasi"
       ];
   
-      doc.font("Helvetica-Bold").fontSize(8);
-      let x = startX;
+      const drawTableHeader = (yPosition) => {
+        doc.font("Helvetica-Bold").fontSize(8);
+        let x = startX;
   
-      // Header background
-      doc
-        .fillColor("#f3f4f6")
-        .rect(x, y, colWidths.reduce((a, b) => a + b, 0), 18)
-        .fill();
+        // Header background
+        doc
+          .fillColor("#f3f4f6")
+          .rect(x, yPosition, colWidths.reduce((a, b) => a + b, 0), 18)
+          .fill();
   
-      // Header text
-      doc.fillColor("#444444");
-      tableHeaders.forEach((header, i) => {
-        doc.text(header, x + 2, y + 5, {
-          width: colWidths[i] - 4,
-          align: "center"
+        // Header text
+        doc.fillColor("#444444");
+        tableHeaders.forEach((header, i) => {
+          doc.text(header, x + 2, yPosition + 5, {
+            width: colWidths[i] - 4,
+            align: "center"
+          });
+          x += colWidths[i];
         });
-        x += colWidths[i];
-      });
+      };
+  
+      drawTableHeader(y);
   
       // Table rows
       y += 18;
       doc.font("Helvetica").fontSize(8);
   
       data.forEach((record, index) => {
-        if (y > 770) { // Adjusted page break point
+        if (y > 700) {
           doc.addPage();
           createHeader();
           y = 150;
-          
-          // Redraw header on new page
-          x = startX;
-          doc.font("Helvetica-Bold").fontSize(8);
-          doc
-            .fillColor("#f3f4f6")
-            .rect(x, y - 18, colWidths.reduce((a, b) => a + b, 0), 18)
-            .fill();
-  
-          doc.fillColor("#444444");
-          tableHeaders.forEach((header, i) => {
-            doc.text(header, x + 2, y - 13, {
-              width: colWidths[i] - 4,
-              align: "center"
-            });
-            x += colWidths[i];
-          });
-          
-          doc.font("Helvetica").fontSize(8);
+          drawTableHeader(y);
+          y += 18;
         }
   
         // Row background
@@ -958,7 +945,7 @@ const absenController = {
             .fill();
         }
   
-        x = startX;
+        let x = startX;
         doc.fillColor("#444444");
   
         // Draw cells
@@ -1014,7 +1001,61 @@ const absenController = {
         y += 18;
       });
   
-      // Footer with adjusted positioning
+      // Add signature section
+      y += 50;
+      const signatureDate = new Date().toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+  
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .fillColor("#444444")
+        .text(`Padang, ${signatureDate}`, 400, y)
+        .text("Pembimbing Lapangan,", 402, y + 20);
+  
+      y += 40;
+  
+      // Add paraf with proper buffer handling
+      if (adminInfo[0]?.paraf_image) {
+        try {
+          const parafImagePath = Buffer.isBuffer(adminInfo[0].paraf_image)
+            ? adminInfo[0].paraf_image.toString("utf8")
+            : adminInfo[0].paraf_image;
+  
+          const parafPath = path.join(process.cwd(), parafImagePath);
+  
+          if (fs.existsSync(parafPath)) {
+            doc.image(parafPath, 405, y, {
+              fit: [100, 50],
+              align: "center",
+              valign: "center"
+            });
+            y += 50;
+          } else {
+            doc.text("(Paraf Digital)", 400, y);
+            y += 30;
+          }
+        } catch (error) {
+          console.error("Error adding paraf:", error);
+          doc.text("(Paraf Digital)", 400, y);
+          y += 30;
+        }
+      } else {
+        doc.text("(Paraf Digital)", 400, y);
+        y += 30;
+      }
+  
+      // Add admin name
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .fillColor("#444444")
+        .text(adminName, 415, y + 10);
+  
+      // Footer
       const range = doc.bufferedPageRange();
       for (let i = range.start; i < range.start + range.count; i++) {
         doc.switchToPage(i);
@@ -1053,272 +1094,357 @@ const absenController = {
   },
 
   exportAbsensiMahasiswa: async (req, res) => {
+    const connection = await db.getConnection();
+    
     try {
       const { selectedIds } = req.body;
       const mahasiswaId = req.user.mahasiswa_id;
-
-      if (
-        !selectedIds ||
-        !Array.isArray(selectedIds) ||
-        selectedIds.length === 0
-      ) {
+  
+      if (!selectedIds || !Array.isArray(selectedIds) || selectedIds.length === 0) {
         return res.status(400).json({
           success: false,
-          message: "Pilih setidaknya satu data absensi untuk diekspor",
+          message: "Pilih setidaknya satu data absensi untuk diekspor"
         });
       }
-
+  
       const placeholders = selectedIds.map(() => "?").join(",");
-      let query = `
-        SELECT
+      
+      // Get mahasiswa and admin info
+      const [userInfo] = await connection.execute(
+        `SELECT 
+          m.nama as mahasiswa_nama,
+          m.nim,
+          m.institusi,
+          a.nama as admin_nama,
+          a.paraf_image
+        FROM mahasiswa m
+        JOIN admin a ON m.admin_id = a.id
+        WHERE m.id = ?`,
+        [mahasiswaId]
+      );
+  
+      if (!userInfo[0]) {
+        throw new Error("Data mahasiswa tidak ditemukan");
+      }
+  
+      // Get attendance data
+      const [data] = await connection.execute(
+        `SELECT
           DATE_FORMAT(a.tanggal, '%d/%m/%Y') as tanggal,
           a.status_kehadiran,
           TIME_FORMAT(a.waktu_masuk, '%H:%i') as waktu_masuk,
           TIME_FORMAT(a.waktu_keluar, '%H:%i') as waktu_keluar,
           a.status_masuk as ketepatan_waktu,
-          CASE
-            WHEN a.dalam_radius = 1 THEN 'Dalam Radius'
-            ELSE 'Luar Radius'
-          END as lokasi
+          a.dalam_radius
         FROM absensi a
         WHERE a.mahasiswa_id = ? AND a.id IN (${placeholders})
-        ORDER BY a.tanggal DESC
-      `;
-
-      const [data] = await db.execute(query, [mahasiswaId, ...selectedIds]);
-
-      if (data.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "Tidak ada data untuk diekspor",
-        });
-      }
-
-      // Get mahasiswa info
-      const [mahasiswaData] = await db.execute(
-        "SELECT nama, nim FROM mahasiswa WHERE id = ?",
-        [mahasiswaId]
+        ORDER BY a.tanggal DESC`,
+        [mahasiswaId, ...selectedIds]
       );
-      const mahasiswaNama = mahasiswaData[0]?.nama || "Mahasiswa";
-      const mahasiswaNim = mahasiswaData[0]?.nim || "-";
-
+  
+      if (data.length === 0) {
+        throw new Error("Tidak ada data untuk diekspor");
+      }
+  
       // Create PDF
       const doc = new PDFDocument({
         size: "A4",
-        margin: 60,
-        bufferPages: true,
+        margin: 40,
+        bufferPages: true
       });
-
+  
+      // Set response headers
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename=Absensi_${mahasiswaNim}_${
-          new Date().toISOString().split("T")[0]
-        }.pdf`
+        `attachment; filename=Absensi_${userInfo[0].nim}_${new Date().toISOString().split("T")[0]}.pdf`
       );
+  
       doc.pipe(res);
-
-      // Header
+  
+      // Header with logos
       const createHeader = () => {
-        const logoPath = path.join(__dirname, "../uploads/assets");
-        const semenPadangLogo = path.join(logoPath, "semen-padang-logo.png");
-        const sigLogo = path.join(logoPath, "sig-logo.png");
-
+        const logoPath = path.join(__dirname, '../uploads/assets');
+        const semenPadangLogo = path.join(logoPath, 'semen-padang-logo.png');
+        const sigLogo = path.join(logoPath, 'sig-logo.png');
+  
         if (fs.existsSync(semenPadangLogo)) {
           doc.image(semenPadangLogo, 60, 40, { width: 60 });
         }
-
+        
         if (fs.existsSync(sigLogo)) {
           doc.image(sigLogo, 495, 40, { width: 60 });
         }
-
-        doc
-          .font("Helvetica-Bold")
-          .fontSize(16)
-          .text("SISTEM MONITORING MAGANG", 160, 50, {
-            align: "center",
-            width: 300,
-          })
-          .fontSize(14)
-          .text("Laporan Absensi Magang", 160, 75, {
-            align: "center",
-            width: 300,
-          });
-
-        doc
-          .moveTo(60, 110)
-          .lineTo(535, 110)
-          .lineWidth(0.5)
-          .strokeColor("#e0e0e0")
-          .stroke();
+  
+        doc.font('Helvetica-Bold')
+           .fontSize(16)
+           .text('SISTEM MONITORING MAGANG', 160, 50, { align: 'center', width: 300 })
+           .fontSize(14)
+           .text('Laporan Absensi Magang', 160, 75, { align: 'center', width: 300 });
+  
+        doc.moveTo(60, 110)
+           .lineTo(535, 110)
+           .lineWidth(0.5)
+           .strokeColor('#e0e0e0')
+           .stroke();
       };
-
+  
       createHeader();
-
+  
       // Metadata
-      const currentDate = new Date().toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-
       doc
         .font("Helvetica")
         .fontSize(10)
         .fillColor("#444444")
-        .moveDown(2.5)
-        .text(`Nama: ${mahasiswaNama}`, 60)
-        .moveDown(0.5)
-        .text(`NIM: ${mahasiswaNim}`, 60)
-        .moveDown(0.5)
-        .text(`Tanggal Cetak: ${currentDate}`, 60)
-        .moveDown(0.5)
-        .text(`Total Data: ${data.length} record`, 60)
-        .moveDown(1);
-
+        .moveDown(2.5)  // Reduced from 2.5 to reduce space after header line
+        .text(`Nama: ${userInfo[0].mahasiswa_nama}`, 40)
+        .text(`NIM: ${userInfo[0].nim}`)
+        .text(`Institusi: ${userInfo[0].institusi}`)
+        .text(`Tanggal Cetak: ${new Date().toLocaleDateString("id-ID")}`)
+        .text(`Total Data: ${data.length} record`)
+        .moveDown(1.9);  // Added specific spacing before table
+  
+      // Table configuration
+      const startX = 40;
+      const colWidths = {
+        no: 30,
+        tanggal: 70,
+        status: 70,
+        waktuMasuk: 70,
+        waktuKeluar: 70,
+        ketepatan: 90,
+        lokasi: 90
+      };
+  
       // Table headers
-      const startX = 60;
+      const headers = {
+        "No": colWidths.no,
+        "Tanggal": colWidths.tanggal,
+        "Status": colWidths.status,
+        "Waktu Masuk": colWidths.waktuMasuk,
+        "Waktu Keluar": colWidths.waktuKeluar,
+        "Ketepatan": colWidths.ketepatan,
+        "Lokasi": colWidths.lokasi
+      };
+  
+      // Calculate total width
+      const totalWidth = Object.values(colWidths).reduce((a, b) => a + b, 0);
+  
+      const drawTableHeader = (yPosition) => {
+        let xPosition = startX;
+        
+        // Header background
+        doc
+          .fillColor("#f3f4f6")
+          .rect(xPosition, yPosition, totalWidth, 20)
+          .fill();
+  
+        // Header text
+        doc
+          .font("Helvetica-Bold")
+          .fontSize(9)
+          .fillColor("#444444");
+  
+        Object.entries(headers).forEach(([title, width]) => {
+          doc.text(title, xPosition + 2, yPosition + 5, {
+            width: width - 4,
+            align: "center"
+          });
+          xPosition += width;
+        });
+      };
+  
+      // Initialize table position
       let yPos = doc.y;
-
-      const tableHeaders = [
-        "No",
-        "Tanggal",
-        "Status",
-        "Waktu Masuk",
-        "Waktu Keluar",
-        "Ketepatan Waktu",
-        "Lokasi",
-      ];
-      const colWidths = [40, 70, 70, 70, 70, 90, 90];
-
-      // Header styling
-      doc.fillColor("#f8f9fa").roundedRect(startX, yPos, 500, 30, 5).fill();
-
-      doc.fillColor("#444444").font("Helvetica-Bold").fontSize(10);
-
-      tableHeaders.forEach((header, i) => {
-        doc.text(
-          header,
-          startX +
-            (i === 0 ? 0 : colWidths.slice(0, i).reduce((a, b) => a + b, 0)),
-          yPos + 10,
-          { width: colWidths[i], align: "center" }
-        );
-      });
-
-      // Data rows
-      yPos += 40;
+      drawTableHeader(yPos);
+      yPos += 20;
+  
+      // Content rows
       doc.font("Helvetica").fontSize(9);
-
+  
       data.forEach((record, index) => {
-        if (yPos > 700) {
+        const rowHeight = 20;
+  
+        // Check if new page is needed
+        if (yPos + rowHeight > 700) {
           doc.addPage();
           createHeader();
           yPos = 150;
+          drawTableHeader(yPos);
+          yPos += 20;
         }
-
+  
+        let xPos = startX;
+  
         // Alternate row backgrounds
         if (index % 2 === 0) {
-          doc.fillColor("#fafafa").roundedRect(startX, yPos, 500, 30, 2).fill();
+          doc
+            .fillColor("#fafafa")
+            .rect(xPos, yPos, totalWidth, rowHeight)
+            .fill();
         }
-
-        doc.fillColor("#444444");
-        let xPos = startX;
-
-        const ketepatanWaktu =
-          record.ketepatan_waktu === "tepat_waktu" ? "Tepat Waktu" : "Telat";
-
-        // Format status text to be more readable
-        const formattedStatus =
-          record.status_kehadiran.charAt(0).toUpperCase() +
-          record.status_kehadiran.slice(1);
-
-        [
-          index + 1,
-          record.tanggal,
-          formattedStatus,
-          record.waktu_masuk || "-",
-          record.waktu_keluar || "-",
-          ketepatanWaktu,
-          record.lokasi,
-        ].forEach((text, i) => {
-          const alignment = i === 0 ? "center" : "left";
-
-          // Special styling for status
-          if (i === 2) {
-            let statusBgColor, statusTextColor;
-            switch (record.status_kehadiran) {
-              case "hadir":
-                statusBgColor = "#e8f5e9";
-                statusTextColor = "#1a8754";
-                break;
-              case "izin":
-                statusBgColor = "#fff3e0";
-                statusTextColor = "#fd7e14";
-                break;
-              case "alpha":
-                statusBgColor = "#fee2e2";
-                statusTextColor = "#dc3545";
-                break;
-              default:
-                statusBgColor = "#f3f4f6";
-                statusTextColor = "#444444";
-            }
-
-            // Draw status pill background
-            doc
-              .fillColor(statusBgColor)
-              .roundedRect(xPos + 5, yPos + 5, colWidths[i] - 10, 20, 10)
-              .fill();
-
-            // Draw status text
-            doc.fillColor(statusTextColor).text(text, xPos, yPos + 8, {
-              width: colWidths[i],
-              align: "center",
-            });
-          } else {
-            doc.fillColor("#444444").text(String(text), xPos, yPos + 10, {
-              width: colWidths[i],
-              align: alignment,
-            });
-          }
-
-          xPos += colWidths[i];
-        });
-
-        yPos += 30;
-      });
-
-      // Footer
-      const createFooter = (pageNumber) => {
-        const totalPages = doc.bufferedPageRange().count;
-        doc.switchToPage(pageNumber);
-
+  
+        // Draw cells
+        // No
         doc
-          .moveTo(60, doc.page.height - 50)
-          .lineTo(535, doc.page.height - 50)
+          .fillColor("#444444")
+          .text((index + 1).toString(), xPos + 2, yPos + 5, {
+            width: colWidths.no - 4,
+            align: "center"
+          });
+        xPos += colWidths.no;
+  
+        // Tanggal
+        doc.text(record.tanggal, xPos + 2, yPos + 5, {
+          width: colWidths.tanggal - 4,
+          align: "left"
+        });
+        xPos += colWidths.tanggal;
+  
+        // Status with color
+        const statusColors = {
+          hadir: { bg: "#e8f5e9", text: "#1a8754" },
+          izin: { bg: "#fff3e0", text: "#fd7e14" },
+          alpha: { bg: "#fee2e2", text: "#dc3545" }
+        };
+  
+        const statusColor = statusColors[record.status_kehadiran] || { bg: "#f3f4f6", text: "#444444" };
+        const statusText = record.status_kehadiran.charAt(0).toUpperCase() + record.status_kehadiran.slice(1);
+        
+        doc
+          .fillColor(statusColor.bg)
+          .roundedRect(xPos + 5, yPos + 2, colWidths.status - 10, rowHeight - 4, 3)
+          .fill()
+          .fillColor(statusColor.text)
+          .text(statusText, xPos, yPos + 5, {
+            width: colWidths.status,
+            align: "center"
+          });
+        xPos += colWidths.status;
+  
+        // Waktu Masuk
+        doc
+          .fillColor("#444444")
+          .text(record.waktu_masuk || "-", xPos + 2, yPos + 5, {
+            width: colWidths.waktuMasuk - 4,
+            align: "center"
+          });
+        xPos += colWidths.waktuMasuk;
+  
+        // Waktu Keluar
+        doc.text(record.waktu_keluar || "-", xPos + 2, yPos + 5, {
+          width: colWidths.waktuKeluar - 4,
+          align: "center"
+        });
+        xPos += colWidths.waktuKeluar;
+  
+        // Ketepatan Waktu
+        const ketepatanText = record.ketepatan_waktu === "tepat_waktu" ? "Tepat Waktu" : "Telat";
+        const isTepatWaktu = record.ketepatan_waktu === "tepat_waktu";
+        
+        doc
+          .fillColor(isTepatWaktu ? "#e8f5e9" : "#fee2e2")
+          .roundedRect(xPos + 5, yPos + 2, colWidths.ketepatan - 10, rowHeight - 4, 3)
+          .fill()
+          .fillColor(isTepatWaktu ? "#1a8754" : "#dc3545")
+          .text(ketepatanText, xPos, yPos + 5, {
+            width: colWidths.ketepatan,
+            align: "center"
+          });
+        xPos += colWidths.ketepatan;
+  
+        // Lokasi
+        const lokasiText = record.dalam_radius ? "Dalam Radius" : "Luar Radius";
+        doc
+          .fillColor(record.dalam_radius ? "#e8f5e9" : "#fee2e2")
+          .roundedRect(xPos + 5, yPos + 2, colWidths.lokasi - 10, rowHeight - 4, 3)
+          .fill()
+          .fillColor(record.dalam_radius ? "#1a8754" : "#dc3545")
+          .text(lokasiText, xPos, yPos + 5, {
+            width: colWidths.lokasi,
+            align: "center"
+          });
+  
+        yPos += rowHeight;
+      });
+  
+      // Add signature section
+      yPos += 50;
+      const signatureDate = new Date().toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+  
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .fillColor("#444444")
+        .text(`Padang, ${signatureDate}`, 400, yPos)
+        .text("Pembimbing Lapangan,", 402, yPos + 20);
+  
+      yPos += 40;
+  
+      // Add paraf with proper buffer handling
+      if (userInfo[0].paraf_image) {
+        try {
+          const parafImagePath = Buffer.isBuffer(userInfo[0].paraf_image)
+            ? userInfo[0].paraf_image.toString("utf8")
+            : userInfo[0].paraf_image;
+  
+          const parafPath = path.join(process.cwd(), parafImagePath);
+  
+          if (fs.existsSync(parafPath)) {
+            doc.image(parafPath, 405, yPos, {
+              fit: [100, 50],
+              align: "center",
+              valign: "center"
+            });
+            yPos += 50;
+          } else {
+            doc.text("(Paraf Digital)", 400, yPos);
+            yPos += 30;
+          }
+        } catch (error) {
+          console.error("Error adding paraf:", error);
+          doc.text("(Paraf Digital)", 400, yPos);
+          yPos += 30;
+        }
+      } else {
+        doc.text("(Paraf Digital)", 400, yPos);
+        yPos += 30;
+      }
+  
+      // Add admin name
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .fillColor("#444444")
+        .text(userInfo[0].admin_nama, 415, yPos + 10);
+  
+      // Add footer
+      const range = doc.bufferedPageRange();
+      for (let i = range.start; i < range.start + range.count; i++) {
+        doc.switchToPage(i);
+  
+        doc
+          .moveTo(40, doc.page.height - 50)
+          .lineTo(552, doc.page.height - 50)
           .lineWidth(0.5)
           .strokeColor("#e0e0e0")
           .stroke();
-
+  
         doc
           .fontSize(8)
           .fillColor("#666666")
           .text(
-            `PT Semen Padang - Sistem Monitoring Magang | Halaman ${
-              pageNumber + 1
-            } dari ${totalPages}`,
-            60,
+            `PT Semen Padang - Sistem Monitoring Magang | Halaman ${i + 1} dari ${range.count}`,
+            40,
             doc.page.height - 35,
             { align: "center" }
           );
-      };
-
-      const range = doc.bufferedPageRange();
-      for (let i = range.start; i < range.start + range.count; i++) {
-        createFooter(i);
       }
-
+  
       doc.end();
     } catch (error) {
       console.error("Export error:", error);
@@ -1326,9 +1452,11 @@ const absenController = {
         res.status(500).json({
           success: false,
           message: "Gagal mengekspor data",
-          error: error.message,
+          error: error.message
         });
       }
+    } finally {
+      connection.release();
     }
   },
 

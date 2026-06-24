@@ -5,13 +5,42 @@ function InfoUser() {
   const [userData, setUserData] = useState({
     nama: "",
     institusi: "",
-    sisa_hari: 0
+    sisa_hari: 0,
+    tanggal_selesai: null
   });
+
+  // Function to calculate business days between two dates
+  const calculateBusinessDays = (endDate) => {
+    const today = new Date();
+    const end = new Date(endDate);
+    
+    // Return 0 if end date is in the past
+    if (end < today) return 0;
+    
+    let count = 0;
+    const current = new Date(today);
+    
+    // Set time to midnight to compare dates only
+    current.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    
+    while (current <= end) {
+      // Sunday = 0, Saturday = 6
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        count++;
+      }
+      // Move to next day
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return count;
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const token = localStorage.getItem("token"); // Assuming token is stored in localStorage
+        const token = localStorage.getItem("token");
         const response = await axios.get("http://localhost:3000/api/user/profile", {
           headers: {
             Authorization: `Bearer ${token}`
@@ -20,10 +49,13 @@ function InfoUser() {
 
         if (response.data.success) {
           const { data } = response.data;
+          const remainingDays = calculateBusinessDays(data.profile.tanggal_selesai);
+          
           setUserData({
             nama: data.profile.nama,
             institusi: data.profile.institusi,
-            sisa_hari: data.profile.sisa_hari
+            sisa_hari: remainingDays,
+            tanggal_selesai: data.profile.tanggal_selesai
           });
         }
       } catch (error) {
@@ -46,7 +78,7 @@ function InfoUser() {
         <div className="text-right">
           <div className="text-gray-600">Masa Magang</div>
           <div className="text-red-500 text-xl font-medium">
-            {userData.sisa_hari} Hari Tersisa
+            {userData.sisa_hari} Hari Kerja Tersisa
           </div>
         </div>
       </div>

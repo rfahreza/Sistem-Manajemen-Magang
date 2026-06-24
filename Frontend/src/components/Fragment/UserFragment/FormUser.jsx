@@ -168,16 +168,16 @@ const FormUser = () => {
   );
 
   return (
-    <div className="bg-gray-">
-      <div className="grid grid-cols-4 gap-6">
+    <div className="bg-gray- max-w-full overflow-x-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Left Side - Main Content */}
-        <div className="col-span-3 space-y-6">
+        <div className="col-span-1 md:col-span-3 space-y-6">
           {/* Profile Section */}
           <div className="bg-white rounded-xl shadow-sm drop-shadow-mg">
-            <div className="flex p-6 gap-8">
+            <div className="flex flex-col md:flex-row p-4 md:p-6 gap-6 md:gap-8">
               {/* Photo Upload */}
               <div className="flex-none">
-                <div className="relative">
+                <div className="relative w-32 mx-auto md:mx-0">
                   <div className="w-32 h-32 rounded-xl overflow-hidden bg-gray-50 border-2 border-gray-200">
                     {profileData.photoPreview ? (
                       <img
@@ -209,7 +209,7 @@ const FormUser = () => {
               {/* Profile Form */}
               <div className="flex-1">
                 <form onSubmit={handleProfileUpdate} className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Nama Lengkap
@@ -282,7 +282,7 @@ const FormUser = () => {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      className="w-full md:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                     >
                       {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                     </button>
@@ -294,13 +294,13 @@ const FormUser = () => {
 
           {/* Password Section */}
           <div className="bg-white rounded-xl shadow-sm">
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-6">
                 <Lock className="w-5 h-5 text-gray-500" />
                 <h2 className="text-lg font-medium">Ubah Password</h2>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Password Fields */}
                 <form onSubmit={handlePasswordUpdate} className="space-y-4">
                   <div>
@@ -409,7 +409,7 @@ const FormUser = () => {
         {/* Right Side - Status */}
         <div className="col-span-1">
           <div className="bg-white rounded-xl shadow-sm">
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               <h2 className="text-lg font-medium mb-4">Status Magang</h2>
               
               <div className="space-y-4">
@@ -445,7 +445,7 @@ const FormUser = () => {
       {/* Alert Messages */}
       {message.text && (
         <div
-          className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg ${
+          className={`fixed bottom-4 right-4 max-w-full md:max-w-sm p-4 rounded-lg shadow-lg ${
             message.type === "success"
               ? "bg-green-50 text-green-700 border border-green-200"
               : "bg-red-50 text-red-700 border border-red-200"

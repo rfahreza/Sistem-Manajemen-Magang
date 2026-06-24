@@ -530,34 +530,31 @@ const logbookController = {
 
       // Page header creation function
       const createHeader = () => {
-        const logoPath = path.join(__dirname, "../uploads/assets");
-        const semenPadangLogo = path.join(logoPath, "semen-padang-logo.png");
-        const sigLogo = path.join(logoPath, "sig-logo.png");
-
+        const logoPath = path.join(__dirname, '../uploads/assets');
+        const semenPadangLogo = path.join(logoPath, 'semen-padang-logo.png');
+        const sigLogo = path.join(logoPath, 'sig-logo.png');
+  
         if (fs.existsSync(semenPadangLogo)) {
-          doc.image(semenPadangLogo, 40, 30, { width: 45 });
+          doc.image(semenPadangLogo, 60, 40, { width: 60 });
         }
-
+        
         if (fs.existsSync(sigLogo)) {
-          doc.image(sigLogo, 510, 30, { width: 40 });
+          doc.image(sigLogo, 495, 40, { width: 60 });
         }
-
-        doc
-          .font("Helvetica-Bold")
-          .fontSize(16)
-          .text("SISTEM MONITORING MAGANG", { align: "center" })
-          .fontSize(14)
-          .text("Laporan Aktivitas Logbook", { align: "center" })
-          .moveDown(2);
-
-        doc
-          .moveTo(40, 90)
-          .lineTo(552, 90)
-          .lineWidth(0.5)
-          .strokeColor("#e0e0e0")
-          .stroke();
+  
+        doc.font('Helvetica-Bold')
+           .fontSize(16)
+           .text('SISTEM MONITORING MAGANG', 160, 50, { align: 'center', width: 300 })
+           .fontSize(14)
+           .text('Laporan Aktifitas Magang', 160, 75, { align: 'center', width: 300 });
+  
+        doc.moveTo(60, 110)
+           .lineTo(535, 110)
+           .lineWidth(0.5)
+           .strokeColor('#e0e0e0')
+           .stroke();
       };
-
+  
       createHeader();
 
       // Add metadata

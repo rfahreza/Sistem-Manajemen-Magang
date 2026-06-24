@@ -10,7 +10,6 @@ function ScanQr() {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Menggunakan Web Audio API untuk membuat suara notifikasi
   const playSound = (type) => {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
@@ -20,20 +19,17 @@ function ScanQr() {
     gainNode.connect(audioContext.destination);
 
     if (type === 'success') {
-      // Suara sukses - nada tinggi pendek
-      oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // Nada A5
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
       gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.1);
     } else if (type === 'error') {
-      // Suara error - nada rendah
-      oscillator.frequency.setValueAtTime(220, audioContext.currentTime); // Nada A3
+      oscillator.frequency.setValueAtTime(220, audioContext.currentTime);
       gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
     }
 
-    // Membersihkan resources
     setTimeout(() => {
       gainNode.disconnect();
       oscillator.disconnect();
@@ -82,7 +78,9 @@ function ScanQr() {
         if (result.success) {
           playSound('success');
           await showSuccessAlert(result.data);
-          window.location.reload();
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000); // Reload after 3 seconds
         }
       } catch (error) {
         playSound('error');
@@ -161,13 +159,12 @@ function ScanQr() {
           </div>
         </div>
       `,
-      showConfirmButton: true,
-      confirmButtonText: 'Selesai',
-      confirmButtonColor: '#10B981',
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
       allowOutsideClick: false,
       customClass: {
-        popup: 'rounded-lg',
-        confirmButton: 'px-6 py-2.5 text-sm font-medium rounded-lg transition-colors'
+        popup: 'rounded-lg'
       }
     });
   };
@@ -223,13 +220,12 @@ function ScanQr() {
           </div>
         </div>
       `,
-      showConfirmButton: true,
-      confirmButtonText: 'Tutup',
-      confirmButtonColor: '#EF4444',
+      showConfirmButton: false,
+      timer: 2500,
+      timerProgressBar: true,
       allowOutsideClick: false,
       customClass: {
-        popup: 'rounded-lg',
-        confirmButton: 'px-6 py-2.5 text-sm font-medium rounded-lg transition-colors'
+        popup: 'rounded-lg'
       }
     });
   };

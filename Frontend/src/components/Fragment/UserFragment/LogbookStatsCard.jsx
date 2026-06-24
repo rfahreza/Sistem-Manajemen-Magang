@@ -2,7 +2,7 @@ import React from 'react';
 
 const LogbookStatsCard = ({ icon, title, value, color }) => {
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow duration-300">
       <div className="flex items-center">
         <div className={`${color} p-3 rounded-lg`}>
           {icon}

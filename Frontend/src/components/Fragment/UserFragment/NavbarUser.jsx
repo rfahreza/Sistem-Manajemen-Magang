@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import NavUser from "../../Elements/Items/NavUser";
 import { UserCircle, LogOut, ChevronDown, AlignJustify } from "lucide-react";
 import { useAuth } from "../../Context/UserContext";
@@ -10,6 +10,7 @@ const NavbarUser = ({ type }) => {
   const [toggle, setToggle] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleToggle = () => {
     setToggle(!toggle);
@@ -35,7 +36,7 @@ const NavbarUser = ({ type }) => {
               className="h-11 w-auto"
             />
             <div className="ml-6 h-full md:flex hidden space-x-8">
-              <Navigation type={type} />
+              <Navigation type={type} location={location} />
             </div>
           </div>
           <div
@@ -69,7 +70,7 @@ const NavbarUser = ({ type }) => {
                   )}
                 </div>
                 <ChevronDown
-                  className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
+                  className={`h-4 w-4 text-gray-500 transition-transform duration-500 ${
                     isDropdownOpen ? "transform rotate-180" : ""
                   }`}
                 />
@@ -77,9 +78,8 @@ const NavbarUser = ({ type }) => {
             </button>
 
             <div
-              className={`
-                absolute right-0 top-full mt-1 w-60 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5
-                transform transition-all duration-200 ease-in-out
+              className={`absolute right-0 top-full mt-1 w-60 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5
+                transform transition-all duration-500 ease-in-out
                 ${isDropdownOpen
                   ? "opacity-100 translate-y-0 visible"
                   : "opacity-0 -translate-y-2 invisible"
@@ -93,7 +93,11 @@ const NavbarUser = ({ type }) => {
 
                 <Link
                   to="/profileUser"
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
+                    location.pathname === "/profileUser"
+                      ? "text-red-500 border-b-2 border-red-500"
+                      : "text-gray-700 hover:bg-gray-50 transition-colors"
+                  }`}
                   onClick={() => setIsDropdownOpen(false)}
                 >
                   <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600">
@@ -129,7 +133,9 @@ const NavbarUser = ({ type }) => {
               </div>
             </div>
           </div>
-          <div className="md:hidden flex justify-between items-center w-full">
+
+          {/* Mobile dropdown */}
+          <div className="md:hidden flex justify-end items-center w-full">
             <div className="bg-white shadow ml-auto px-[12px] py-[12px] rounded-md">
               <div>
                 <AlignJustify
@@ -145,7 +151,30 @@ const NavbarUser = ({ type }) => {
                   : "opacity-0 -translate-y-2 invisible"
               }`}
             >
-              <Navigation type={type} />
+              <Navigation type={type} location={location} />
+
+              {/* Mobile Edit Profile and Logout buttons */}
+              <Link
+                to="/profileUser"
+                className={`flex items-center gap-3 px-3 py-3 rounded-lg mt-2 ${
+                  location.pathname === "/profileUser"
+                    ? "text-red-500"
+                    : "text-gray-500"
+                }`}
+                onClick={() => setToggle(false)}
+              >
+                <span className="font-medium hover:text-gray-700 duration-500">Edit Profile</span>
+              </Link>
+
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setToggle(false);
+                }}
+                className="flex items-center gap-3 px-3 py-2 text-gray-500 "
+              >
+                <span className="font-medium hover:text-gray-700 duration-500">Log Out</span>
+              </button>
             </div>
           </div>
         </div>
@@ -165,5 +194,6 @@ const Navigation = ({ type }) => {
     return <NavUser />;
   }
 };
+
 
 export default NavbarUser;

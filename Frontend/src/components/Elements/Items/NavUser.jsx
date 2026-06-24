@@ -39,7 +39,7 @@ function NavUser() {
         <div
           key={item.id}
           className={`${location.pathname === item.link || active === item.id
-            ? "text-red-500 border-b-2 border-red-500"
+            ? "text-red-500 md:border-b-2 md:border-red-500"
             : "text-gray-500 hover:text-gray-700 duration-500"} px-3 pt-5 cursor-pointer`}
           onClick={() => handleClick(item.id, item.link)}
         >
