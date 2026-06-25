@@ -12,6 +12,9 @@ router.post(
   absenController.scanQR
 );
 
+// Face scan absensi (public, no auth)
+router.post('/face-scan', absenController.faceScan);
+
 // Middleware untuk memverifikasi token untuk semua routes
 router.use(auth.verifyToken);
 

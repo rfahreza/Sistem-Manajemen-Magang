@@ -195,6 +195,177 @@ const absenController = {
     }
   },
 
+  faceScan: async (req, res) => {
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+      const { mahasiswa_id, latitude, longitude, deviceInfo } = req.body;
+
+      // Validate required fields
+      if (!mahasiswa_id || !latitude || !longitude) {
+        res.setHeader('X-Play-Sound', 'error');
+        return res.status(400).json({
+          success: false,
+          message: 'Data tidak lengkap',
+        });
+      }
+
+      // Get mahasiswa data
+      const [mahasiswa] = await connection.execute(
+        'SELECT * FROM mahasiswa WHERE id = ? AND status = "aktif"',
+        [mahasiswa_id]
+      );
+
+      if (mahasiswa.length === 0) {
+        res.setHeader('X-Play-Sound', 'error');
+        return res.status(404).json({
+          success: false,
+          message: "Mahasiswa tidak ditemukan atau tidak aktif",
+        });
+      }
+
+      // Get active setting
+      const [settings] = await connection.execute(
+        "SELECT * FROM setting_absensi WHERE is_active = true"
+      );
+
+      if (settings.length === 0) {
+        res.setHeader('X-Play-Sound', 'error');
+        return res.status(400).json({
+          success: false,
+          message: "Pengaturan absensi belum dikonfigurasi",
+        });
+      }
+
+      const setting = settings[0];
+
+      // Check if within radius
+      const distance = geolib.getDistance(
+        { latitude, longitude },
+        {
+          latitude: setting.latitude_pusat,
+          longitude: setting.longitude_pusat,
+        }
+      );
+
+      const dalamRadius = distance <= setting.radius_meter;
+
+      // Get current time
+      const now = new Date();
+      const currentTime = now.toTimeString().split(" ")[0];
+      const currentDate = now.toISOString().split("T")[0];
+
+      // Check if already checked in today
+      const [existingAbsensi] = await connection.execute(
+        "SELECT * FROM absensi WHERE mahasiswa_id = ? AND DATE(tanggal) = ?",
+        [mahasiswa_id, currentDate]
+      );
+
+      if (existingAbsensi.length === 0) {
+        // Determine status for new check-in
+        let statusMasuk = "tepat_waktu";
+        if (currentTime > setting.jam_masuk) {
+          const timeDiff =
+            (new Date(`2000/01/01 ${currentTime}`) -
+              new Date(`2000/01/01 ${setting.jam_masuk}`)) /
+            1000 /
+            60;
+
+          if (timeDiff > setting.batas_telat_menit) {
+            statusMasuk = "telat";
+          }
+        }
+
+        // Create new attendance record for check-in
+        await connection.execute(
+          `INSERT INTO absensi (
+            mahasiswa_id, setting_absensi_id, tanggal,
+            waktu_masuk, status_masuk, status_kehadiran,
+            latitude_scan, longitude_scan, dalam_radius,
+            device_info
+          ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, 'hadir', ?, ?, ?, ?)`,
+          [
+            mahasiswa_id,
+            setting.id,
+            currentDate,
+            statusMasuk,
+            latitude,
+            longitude,
+            dalamRadius,
+            deviceInfo,
+          ]
+        );
+
+        await connection.commit();
+
+        res.setHeader('X-Play-Sound', 'success');
+        return res.json({
+          success: true,
+          message: "Absen masuk berhasil",
+          data: {
+            type: "masuk",
+            status: statusMasuk,
+            dalam_radius: dalamRadius,
+            nama: mahasiswa[0].nama,
+            waktu: currentTime,
+          },
+        });
+      } else {
+        // Check if already checked out
+        if (existingAbsensi[0].waktu_keluar !== null) {
+          res.setHeader('X-Play-Sound', 'error');
+          return res.status(400).json({
+            success: false,
+            message: "Anda sudah absen pulang",
+          });
+        }
+
+        // Check if can check out
+        if (currentTime < setting.jam_pulang) {
+          res.setHeader('X-Play-Sound', 'error');
+          return res.status(400).json({
+            success: false,
+            message: "Belum waktunya pulang",
+          });
+        }
+
+        // Update only waktu_keluar for check-out
+        await connection.execute(
+          `UPDATE absensi 
+           SET waktu_keluar = CURRENT_TIMESTAMP,
+               updated_at = CURRENT_TIMESTAMP 
+           WHERE id = ? 
+           AND waktu_keluar IS NULL`,
+          [existingAbsensi[0].id]
+        );
+
+        await connection.commit();
+
+        res.setHeader('X-Play-Sound', 'success');
+        return res.json({
+          success: true,
+          message: "Absen pulang berhasil",
+          data: {
+            type: "pulang",
+            nama: mahasiswa[0].nama,
+            waktu: currentTime,
+            dalam_radius: dalamRadius,
+          },
+        });
+      }
+    } catch (error) {
+      await connection.rollback();
+      console.error("Face scan error:", error);
+      res.setHeader('X-Play-Sound', 'error');
+      res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan saat proses absensi",
+      });
+    } finally {
+      connection.release();
+    }
+  },
+
   // Get riwayat absensi mahasiswa
   getRiwayatAbsensi: async (req, res) => {
     try {
