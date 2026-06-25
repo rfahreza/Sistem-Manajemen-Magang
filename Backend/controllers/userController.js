@@ -214,6 +214,9 @@ const userController = {
         )}/uploads/profiles/${updatedUser[0].photo_profile}`;
       }
 
+      // FIX 5: Remove face_descriptor from response (m.* exposes it)
+      delete updatedUser[0].face_descriptor;
+
       res.json({
         success: true,
         message: "Profile berhasil diupdate",
@@ -483,10 +486,18 @@ const userController = {
         });
       }
 
-      if (!face_descriptor.every((el) => typeof el === 'number')) {
+      if (!face_descriptor.every((el) => typeof el === 'number' && isFinite(el))) {
         return res.status(400).json({
           success: false,
           message: 'Semua elemen face_descriptor harus berupa number',
+        });
+      }
+
+      // FIX 1: Null-check mahasiswaId before UPDATE
+      if (!mahasiswaId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Data mahasiswa tidak ditemukan',
         });
       }
 
@@ -518,10 +529,14 @@ const userController = {
          WHERE face_descriptor IS NOT NULL AND status = 'aktif'`
       );
 
-      const data = rows.map((r) => ({
-        mahasiswa_id: r.mahasiswa_id,
-        face_descriptor: JSON.parse(r.face_descriptor),
-      }));
+      const data = rows.reduce((acc, r) => {
+        try {
+          acc.push({ mahasiswa_id: r.mahasiswa_id, face_descriptor: JSON.parse(r.face_descriptor) });
+        } catch (e) {
+          console.warn(`Skipping mahasiswa_id ${r.mahasiswa_id}: invalid face_descriptor JSON`);
+        }
+        return acc;
+      }, []);
 
       return res.json({
         success: true,

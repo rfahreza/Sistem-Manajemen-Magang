@@ -7,7 +7,7 @@ const fs = require("fs");
 
 const absenController = {
   scanQR: async (req, res) => {
-    if (process.env.QR_ENABLED === 'false') {
+    if (String(process.env.QR_ENABLED).toLowerCase() === 'false') {
       return res.status(503).json({
         success: false,
         message: 'QR scan sedang dinonaktifkan. Gunakan face recognition.',
