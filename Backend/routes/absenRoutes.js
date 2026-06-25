@@ -12,7 +12,9 @@ router.post(
   absenController.scanQR
 );
 
-// Face scan absensi (public, no auth)
+// NOTE: This endpoint is intentionally public (no auth) as face recognition
+// is performed client-side before sending mahasiswa_id. Rate limiting
+// should be added at the nginx/proxy level in production.
 router.post('/face-scan', absenController.faceScan);
 
 // Middleware untuk memverifikasi token untuk semua routes
