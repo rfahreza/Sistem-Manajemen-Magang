@@ -23,6 +23,7 @@ const authController = {
         tanggal_mulai,
         tanggal_selesai,
         admin_id,
+        face_descriptor,
       } = req.body;
 
       // Validasi input
@@ -42,6 +43,19 @@ const authController = {
         return res.status(400).json({
           success: false,
           message: "Semua field harus diisi",
+        });
+      }
+
+      // Validasi face_descriptor
+      if (
+        !face_descriptor ||
+        !Array.isArray(face_descriptor) ||
+        face_descriptor.length !== 128 ||
+        !face_descriptor.every((num) => typeof num === "number" && !isNaN(num))
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Data wajah (face descriptor) wajib diisi dan harus valid",
         });
       }
 
@@ -66,8 +80,8 @@ const authController = {
         `INSERT INTO mahasiswa (
           user_id, admin_id, nim, nama, institusi,
           jenis_kelamin, alamat, no_telepon, tanggal_mulai, tanggal_selesai,
-          status, sisa_hari
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'aktif', ?)`,
+          status, sisa_hari, face_descriptor
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'aktif', ?, ?)`,
         [
           userId,
           admin_id,
@@ -80,6 +94,7 @@ const authController = {
           tanggal_mulai,
           tanggal_selesai,
           sisaHari,
+          JSON.stringify(face_descriptor),
         ]
       );
 
