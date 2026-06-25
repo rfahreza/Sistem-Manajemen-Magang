@@ -8,6 +8,7 @@ const authController = {
   // Register mahasiswa baru
   register: async (req, res) => {
     const connection = await db.getConnection();
+    let qrCodePath = null;
     try {
       await connection.beginTransaction();
 
@@ -101,7 +102,7 @@ const authController = {
       const mahasiswaId = mahasiswaResult.insertId;
 
       // Generate QR Code with the new mahasiswa data
-      const qrCodePath = await qrcodeUtil.generateMahasiswaQR({
+      qrCodePath = await qrcodeUtil.generateMahasiswaQR({
         id: mahasiswaId,
         nim,
         nama,
@@ -127,8 +128,12 @@ const authController = {
       await connection.rollback();
       console.error("Register error:", error);
       // Delete QR code if exists
-      if (error.qrCodePath) {
-        await qrcodeUtil.deleteQRCode(error.qrCodePath);
+      if (qrCodePath) {
+        try {
+          await qrcodeUtil.deleteQRCode(qrCodePath);
+        } catch (deleteError) {
+          console.error("Failed to delete QR Code file:", deleteError);
+        }
       }
       res.status(500).json({
         success: false,
@@ -206,9 +211,9 @@ const authController = {
           role: user.role,
           email: user.email,
           ...(user.role === "mahasiswa"
-            ? { mahasiswa_id: additionalData.id }
+            ? { mahasiswa_id: additionalData.mahasiswa_id }
             : {}),
-          ...(user.role === "admin" ? { admin_id: additionalData.id } : {}),
+          ...(user.role === "admin" ? { admin_id: additionalData.admin_id } : {}),
         },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN }
@@ -342,58 +347,6 @@ const authController = {
       res.status(500).json({
         success: false,
         message: "Logout gagal",
-      });
-    }
-  },
-
-  // Update password
-  updatePassword: async (req, res) => {
-    try {
-      const { oldPassword, newPassword } = req.body;
-      const userId = req.user.id;
-
-      // Get current user
-      const [users] = await db.execute("SELECT * FROM users WHERE id = ?", [
-        userId,
-      ]);
-
-      if (users.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "User tidak ditemukan",
-        });
-      }
-
-      // Verify old password
-      const validPassword = await bcrypt.compare(
-        oldPassword,
-        users[0].password
-      );
-      if (!validPassword) {
-        return res.status(401).json({
-          success: false,
-          message: "Password lama tidak sesuai",
-        });
-      }
-
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-      // Update password
-      await db.execute("UPDATE users SET password = ? WHERE id = ?", [
-        hashedPassword,
-        userId,
-      ]);
-
-      res.json({
-        success: true,
-        message: "Password berhasil diupdate",
-      });
-    } catch (error) {
-      console.error("Update password error:", error);
-      res.status(500).json({
-        success: false,
-        message: "Terjadi kesalahan saat update password",
       });
     }
   },
