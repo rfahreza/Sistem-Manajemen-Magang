@@ -274,14 +274,22 @@ function ScanQr() {
                 </div>
               )}
 
-              <div className="text-center space-y-4">
+              <div className="text-center space-y-4 flex flex-col items-center">
                 {!isLoading && (
-                  <button
-                    className="px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    onClick={() => navigate("/")}
-                  >
-                    Tutup
-                  </button>
+                  <>
+                    <button
+                      className="w-full max-w-xs py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold shadow-md"
+                      onClick={() => navigate("/scan-face")}
+                    >
+                      Beralih ke Scan Wajah
+                    </button>
+                    <button
+                      className="w-full max-w-xs py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                      onClick={() => navigate("/")}
+                    >
+                      Tutup
+                    </button>
+                  </>
                 )}
               </div>
             </div>

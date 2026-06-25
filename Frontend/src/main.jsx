@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./Pages/Auth/login";
 import RegisterPage from "./Pages/Auth/register";
 import ScanQRCodePage from "./Pages/Auth/scan";
+import ScanFacePage from "./Pages/Auth/scanFace";
 import DashboardPage from "./Pages/Admin/dashboard";
 import InternshipPage from "./Pages/Admin/internship";
 import AbsensiPage from "./Pages/Admin/absensi";
@@ -33,6 +34,7 @@ createRoot(document.getElementById("root")).render(
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/scan" element={<ScanQRCodePage />} />
+          <Route path="/scan-face" element={<ScanFacePage />} />
 
           {/* Protected Admin Routes */}
           <Route
