@@ -2,16 +2,16 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import * as faceapi from "@vladmandic/face-api";
 import { useFaceModels } from "./useFaceModels";
 import { useCameraStream } from "./useCameraStream";
-import { drawDetectionResult, clearCanvas } from "./faceDrawingUtils";
+import { clearCanvas } from "./faceDrawingUtils";
 
 /**
  * Main orchestrator hook for facial scanning and attendance verification.
  * Coordinates face-api model loading, webcam feed, canvas drawing, and real-time recognition loop.
  *
  * @param {Object} props
- * @param {Function} [props.onMatch] - Callback when a recognized face is matched
+ * @param {Function} [props.onCandidateFound] - Callback when a candidate face match is found for user verification
  */
-export const useFaceScanner = ({ onMatch } = {}) => {
+export const useFaceScanner = ({ onCandidateFound } = {}) => {
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
 
@@ -32,6 +32,7 @@ export const useFaceScanner = ({ onMatch } = {}) => {
 
   const isProcessingRef = useRef(false);
   const cooldownRef = useRef(false);
+  const isVerifyingRef = useRef(false);
 
   // Sync refs with states to prevent stale closures in requestAnimationFrame loop
   const updateProcessing = useCallback((processing) => {
@@ -63,10 +64,10 @@ export const useFaceScanner = ({ onMatch } = {}) => {
       return;
     }
 
-    if (!isProcessingRef.current && !cooldownRef.current) {
+    if (!isProcessingRef.current && !cooldownRef.current && !isVerifyingRef.current) {
       try {
         const options = new faceapi.TinyFaceDetectorOptions({
-          inputSize: 320,
+          inputSize: 416,
           scoreThreshold: 0.5,
         });
 
@@ -81,6 +82,8 @@ export const useFaceScanner = ({ onMatch } = {}) => {
             width: videoRef.current.videoWidth || 640,
             height: videoRef.current.videoHeight || 480,
           };
+          faceapi.matchDimensions(canvas, displaySize);
+          clearCanvas(canvas);
 
           if (detection) {
             const resized = faceapi.resizeResults(detection, displaySize);
@@ -90,33 +93,30 @@ export const useFaceScanner = ({ onMatch } = {}) => {
               const student = students.find(
                 (s) => s.mahasiswa_id.toString() === bestMatch.label
               );
-              const studentName = student ? student.nama : `ID: ${bestMatch.label}`;
-              const confidence = Math.round((1 - bestMatch.distance) * 100);
 
-              setRecognizedUser({
-                name: studentName,
-                nim: student?.nim || "",
-                confidence,
-              });
+              if (student) {
+                const studentName = student.nama;
+                isVerifyingRef.current = true;
 
-              drawDetectionResult(canvas, displaySize, resized.detection.box, {
-                name: studentName,
-                confidence,
-                isMatched: true,
-              });
+                setRecognizedUser({
+                  name: studentName,
+                  nim: student.nim || "",
+                  mahasiswa_id: student.mahasiswa_id,
+                });
 
-              if (onMatch && student) {
-                onMatch(student.mahasiswa_id, studentName);
+                if (onCandidateFound) {
+                  onCandidateFound({
+                    mahasiswaId: student.mahasiswa_id,
+                    studentName: studentName,
+                    nim: student.nim || "",
+                  });
+                }
               }
             } else {
               setRecognizedUser(null);
-              drawDetectionResult(canvas, displaySize, resized.detection.box, {
-                isMatched: false,
-              });
             }
           } else {
             setRecognizedUser(null);
-            clearCanvas(canvas);
           }
         }
       } catch (e) {
@@ -125,7 +125,7 @@ export const useFaceScanner = ({ onMatch } = {}) => {
     }
 
     animationFrameRef.current = requestAnimationFrame(runDetection);
-  }, [faceMatcherRef, onMatch, students]);
+  }, [faceMatcherRef, onCandidateFound, students]);
 
   // 3. Manage webcam stream
   const isCameraEnabled = !isLoadingModels && !isLoadingData;
@@ -148,9 +148,17 @@ export const useFaceScanner = ({ onMatch } = {}) => {
     };
   }, [stopDetectionLoop, stopCamera]);
 
-  // Cooldown timer to prevent duplicate triggers
+  // Resume scanning after user cancels or rejects verification
+  const resumeScanning = useCallback(() => {
+    isVerifyingRef.current = false;
+    setRecognizedUser(null);
+    clearCanvas(canvasRef.current);
+  }, []);
+
+  // Cooldown timer to prevent duplicate triggers after successful attendance
   const startCooldown = useCallback(
     (durationMs = 3500) => {
+      isVerifyingRef.current = false;
       updateProcessing(false);
       updateCooldown(true);
 
@@ -175,6 +183,7 @@ export const useFaceScanner = ({ onMatch } = {}) => {
     cooldown,
     captureSnapshot,
     startCooldown,
+    resumeScanning,
     markProcessing: updateProcessing,
   };
 };
