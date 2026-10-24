@@ -4,6 +4,7 @@ import { HiOutlineMail } from "react-icons/hi";
 import { LuLockKeyhole } from "react-icons/lu";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 import { useAuth } from "../Context/UserContext";
+import { ScanFace, QrCode } from "lucide-react";
 
 const FormLogin = () => {
   const navigate = useNavigate();
@@ -46,9 +47,9 @@ const FormLogin = () => {
 
   return (
     <div className="w-full max-w-md">
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative text-sm">
             {error}
           </div>
         )}
@@ -61,7 +62,7 @@ const FormLogin = () => {
             type="email"
             name="email"
             placeholder="Email"
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 text-sm"
             value={formData.email}
             onChange={handleChange}
             required
@@ -76,7 +77,7 @@ const FormLogin = () => {
             type={showPassword ? "text" : "password"}
             name="password"
             placeholder="Password"
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 text-sm"
             value={formData.password}
             onChange={handleChange}
             required
@@ -94,25 +95,39 @@ const FormLogin = () => {
           </button>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 pt-1">
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 transition duration-300 disabled:opacity-50"
+            className="w-full bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 transition duration-300 disabled:opacity-50 font-medium text-sm"
           >
             {loading ? "Masuk..." : "Masuk"}
           </button>
 
+          <div className="relative flex items-center justify-center my-1">
+            <div className="border-t border-gray-200 w-full"></div>
+            <span className="bg-white px-2 text-xs text-gray-400 uppercase tracking-wider absolute">
+              Kiosk Absensi
+            </span>
+          </div>
+
+          <Link
+            to="/scan-face"
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300 text-center font-medium flex items-center justify-center gap-2 shadow-sm text-sm"
+          >
+            <ScanFace size={18} /> Absen Pengenalan Wajah
+          </Link>
+
           <Link
             to="/scan"
-            className="w-full bg-white text-black border border-black py-2 px-4 rounded-md hover:bg-gray-100 transition duration-300 text-center"
+            className="w-full bg-white text-gray-700 border border-gray-300 py-2 px-4 rounded-md hover:bg-gray-50 transition duration-300 text-center font-medium flex items-center justify-center gap-2 text-sm"
           >
-            Scan QR Code
+            <QrCode size={18} /> Scan QR Code
           </Link>
         </div>
 
-        <div className="text-center">
-          <Link to="/register" className="text-red-500 hover:underline text-sm">
+        <div className="text-center pt-2">
+          <Link to="/register" className="text-red-500 hover:underline text-sm font-medium">
             Belum punya akun? Daftar
           </Link>
         </div>

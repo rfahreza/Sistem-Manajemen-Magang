@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import QrScanner from "react-qr-scanner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { ScanFace } from "lucide-react";
 import { CircularProgress } from "@mui/material";
 import Swal from "sweetalert2";
 import Background from "../Elements/Items/bg";
