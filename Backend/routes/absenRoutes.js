@@ -4,6 +4,10 @@ const absenController = require("../controllers/absenController");
 const auth = require("../middleware/auth");
 const validation = require("../middleware/validation");
 
+// Face Recognition scan & descriptors
+router.get("/face-descriptors", absenController.getFaceDescriptors);
+router.post("/scan-face", absenController.scanFace);
+
 // QR Code scan
 router.post(
   "/scan",
