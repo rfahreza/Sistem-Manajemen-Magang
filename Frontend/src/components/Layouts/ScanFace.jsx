@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Logo from "../Elements/Logo/Logo";
 import Background from "../Elements/Items/bg";
@@ -12,66 +12,27 @@ import { playSound, showSuccessAlert, showErrorAlert } from "../Fragment/FaceSca
 
 function ScanFace() {
   const navigate = useNavigate();
+  const [candidate, setCandidate] = useState(null);
+  const timeoutRef = useRef(null);
 
-  // Handle attendance submission to API
-  const handleAttendance = useCallback(
-    async (mahasiswaId, studentName) => {
-      markProcessing(true);
+  // Called when a face matches a registered student
+  const handleCandidateFound = useCallback((candidateData) => {
+    setCandidate(candidateData);
+  }, []);
 
-      try {
-        const snapshot = captureSnapshot();
-
-        let position = null;
-        try {
-          position = await new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 5000,
-              maximumAge: 0,
-            });
-          });
-        } catch (geoErr) {
-          console.warn("Geolocation warning:", geoErr);
-        }
-
-        const requestData = {
-          mahasiswa_id: mahasiswaId,
-          latitude: position?.coords?.latitude || null,
-          longitude: position?.coords?.longitude || null,
-          deviceInfo: JSON.stringify({
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            mode: "kiosk_face_recognition",
-          }),
-          photo: snapshot,
-        };
-
-        const response = await fetch("http://localhost:3000/api/absen/scan-face", {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestData),
-        });
-
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || "Gagal memproses absensi wajah");
-        }
-
-        playSound("success");
-        await showSuccessAlert(result.data, studentName);
-      } catch (error) {
-        playSound("error");
-        await showErrorAlert(error.message || "Gagal memproses absensi wajah");
-      } finally {
-        startCooldown(3500);
+  // Auto-cancel verification prompt after 12 seconds if unattended
+  useEffect(() => {
+    if (candidate) {
+      timeoutRef.current = setTimeout(() => {
+        handleRejectAttendance();
+      }, 12000);
+    }
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
-    },
-    [] // stable reference
-  );
+    };
+  }, [candidate]);
 
   const {
     videoRef,
@@ -85,8 +46,83 @@ function ScanFace() {
     cooldown,
     captureSnapshot,
     startCooldown,
+    resumeScanning,
     markProcessing,
-  } = useFaceScanner({ onMatch: handleAttendance });
+  } = useFaceScanner({ onCandidateFound: handleCandidateFound });
+
+  // User confirmed "Ya, Benar (Absen)"
+  const handleConfirmAttendance = async () => {
+    if (!candidate || isProcessing) return;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    markProcessing(true);
+    const targetCandidate = candidate;
+    setCandidate(null);
+
+    try {
+      const snapshot = captureSnapshot();
+
+      let position = null;
+      try {
+        position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 5000,
+            maximumAge: 0,
+          });
+        });
+      } catch (geoErr) {
+        console.warn("Geolocation warning:", geoErr);
+      }
+
+      const requestData = {
+        mahasiswa_id: targetCandidate.mahasiswaId,
+        latitude: position?.coords?.latitude || null,
+        longitude: position?.coords?.longitude || null,
+        deviceInfo: JSON.stringify({
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          mode: "kiosk_face_recognition_verified",
+        }),
+        photo: snapshot,
+      };
+
+      const response = await fetch("http://localhost:3000/api/absen/scan-face", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Gagal memproses absensi wajah");
+      }
+
+      playSound("success");
+      await showSuccessAlert(result.data, targetCandidate.studentName);
+    } catch (error) {
+      playSound("error");
+      await showErrorAlert(error.message || "Gagal memproses absensi wajah");
+    } finally {
+      startCooldown(3500);
+    }
+  };
+
+  // User clicked "Bukan Saya / Scan Ulang"
+  const handleRejectAttendance = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setCandidate(null);
+    resumeScanning();
+  };
 
   const isLoading = isLoadingModels || isLoadingData;
 
@@ -112,30 +148,66 @@ function ScanFace() {
                 isProcessing={isProcessing}
               />
 
-              {/* Recognition Status / Standby Banner */}
-              {!isLoading && (
-                <FaceStatusCard
-                  recognizedUser={recognizedUser}
-                  totalStudents={students.length}
-                />
+              {/* Interactive Verification Prompt */}
+              {candidate ? (
+                <div className="w-full mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg mx-auto mb-2 shadow-sm">
+                    {candidate.studentName.charAt(0)}
+                  </div>
+                  <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
+                    Wajah Terdeteksi
+                  </p>
+                  <h3 className="text-base font-bold text-gray-900 mt-0.5">
+                    {candidate.studentName}
+                  </h3>
+                  <p className="text-xs text-gray-600 mb-3">NIM: {candidate.nim || "-"}</p>
+
+                  <p className="text-xs font-semibold text-gray-700 mb-3">
+                    Apakah benar data ini sesuai dengan Anda?
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      variant="w-full bg-green-600 hover:bg-green-700 text-xs font-semibold py-2"
+                      onClick={handleConfirmAttendance}
+                    >
+                      Ya, Benar (Absen)
+                    </Button>
+                    <WhiteButton
+                      variant="w-full text-xs font-semibold py-2"
+                      onClick={handleRejectAttendance}
+                    >
+                      Bukan Saya (Scan Ulang)
+                    </WhiteButton>
+                  </div>
+                </div>
+              ) : (
+                !isLoading && (
+                  <FaceStatusCard
+                    recognizedUser={recognizedUser}
+                    totalStudents={students.length}
+                  />
+                )
               )}
 
-              {/* Action Buttons using existing repository elements */}
-              <div className="flex flex-col gap-3 w-full">
-                <WhiteButton
-                  variant="w-full text-sm"
-                  onClick={() => navigate("/scan")}
-                >
-                  Scan QR Code
-                </WhiteButton>
+              {/* Navigation Actions */}
+              {!candidate && (
+                <div className="flex flex-col gap-3 w-full">
+                  <WhiteButton
+                    variant="w-full text-sm"
+                    onClick={() => navigate("/scan")}
+                  >
+                    Scan QR Code
+                  </WhiteButton>
 
-                <Button
-                  variant="w-full bg-red-600 hover:bg-red-700 text-sm font-medium"
-                  onClick={() => navigate("/")}
-                >
-                  Tutup
-                </Button>
-              </div>
+                  <Button
+                    variant="w-full bg-red-600 hover:bg-red-700 text-sm font-medium"
+                    onClick={() => navigate("/")}
+                  >
+                    Tutup
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

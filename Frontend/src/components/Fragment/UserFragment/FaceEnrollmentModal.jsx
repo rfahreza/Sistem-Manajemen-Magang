@@ -10,6 +10,7 @@ const FaceEnrollmentModal = ({ isOpen, onClose, onSuccess }) => {
   const [isDetecting, setIsDetecting] = useState(false);
   const [faceDetected, setFaceDetected] = useState(false);
   const [detectionMessage, setDetectionMessage] = useState("Memuat model AI...");
+  const [samplingProgress, setSamplingProgress] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [capturedDescriptor, setCapturedDescriptor] = useState(null);
   const [previewSnapshot, setPreviewSnapshot] = useState(null);
@@ -108,7 +109,7 @@ const FaceEnrollmentModal = ({ isOpen, onClose, onSuccess }) => {
 
   // Continuous face detection loop
   useEffect(() => {
-    if (!isDetecting || !videoRef.current || previewSnapshot) return;
+    if (!isDetecting || !videoRef.current || previewSnapshot || samplingProgress) return;
 
     let isRunning = true;
 
@@ -152,9 +153,9 @@ const FaceEnrollmentModal = ({ isOpen, onClose, onSuccess }) => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isDetecting, previewSnapshot]);
+  }, [isDetecting, previewSnapshot, samplingProgress]);
 
-  // Capture face descriptor and preview
+  // Multi-frame average capture (3-5 samples) for high accuracy
   const handleCapture = async () => {
     if (!videoRef.current) return;
 
@@ -162,42 +163,73 @@ const FaceEnrollmentModal = ({ isOpen, onClose, onSuccess }) => {
       setIsSaving(true);
       const options = new faceapi.TinyFaceDetectorOptions({
         inputSize: 416,
-        scoreThreshold: 0.6,
+        scoreThreshold: 0.55,
       });
 
-      const detection = await faceapi
-        .detectSingleFace(videoRef.current, options)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+      const totalSamples = 5;
+      const collectedDescriptors = [];
+      let bestSnapshotUrl = null;
 
-      if (!detection) {
+      for (let i = 0; i < totalSamples; i++) {
+        setSamplingProgress(`Merekam sampel ${i + 1} dari ${totalSamples}...`);
+
+        const detection = await faceapi
+          .detectSingleFace(videoRef.current, options)
+          .withFaceLandmarks()
+          .withFaceDescriptor();
+
+        if (detection) {
+          collectedDescriptors.push(detection.descriptor);
+
+          if (!bestSnapshotUrl) {
+            const canvas = document.createElement("canvas");
+            canvas.width = videoRef.current.videoWidth || 640;
+            canvas.height = videoRef.current.videoHeight || 480;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+            bestSnapshotUrl = canvas.toDataURL("image/jpeg", 0.85);
+          }
+        }
+
+        // Small pause between samples
+        await new Promise((r) => setTimeout(r, 160));
+      }
+
+      if (collectedDescriptors.length < 3) {
         Swal.fire({
           icon: "warning",
-          title: "Wajah Belum Terdeteksi",
-          text: "Pastikan pencahayaan cukup dan wajah Anda menghadap langsung ke kamera.",
+          title: "Sampel Wajah Tidak Cukup",
+          text: "Wajah sempat tidak terdeteksi saat proses perekaman. Pastikan tetap tenang menghadap kamera.",
         });
+        setSamplingProgress(null);
         setIsSaving(false);
         return;
       }
 
-      // Capture screenshot
-      const canvas = document.createElement("canvas");
-      canvas.width = videoRef.current.videoWidth || 640;
-      canvas.height = videoRef.current.videoHeight || 480;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-      const snapshotUrl = canvas.toDataURL("image/jpeg", 0.85);
+      // Calculate averaged 128D vector
+      const sampleCount = collectedDescriptors.length;
+      const averagedVector = new Array(128).fill(0);
 
-      setPreviewSnapshot(snapshotUrl);
-      setCapturedDescriptor(Array.from(detection.descriptor));
+      for (let d = 0; d < 128; d++) {
+        let sum = 0;
+        for (let s = 0; s < sampleCount; s++) {
+          sum += collectedDescriptors[s][d];
+        }
+        averagedVector[d] = sum / sampleCount;
+      }
+
+      setPreviewSnapshot(bestSnapshotUrl);
+      setCapturedDescriptor(averagedVector);
+      setSamplingProgress(null);
       stopCamera();
     } catch (err) {
       console.error("Error capturing face:", err);
       Swal.fire({
         icon: "error",
         title: "Gagal Mengambil Wajah",
-        text: "Terjadi kesalahan saat memproses wajah. Silakan coba lagi.",
+        text: "Terjadi kesalahan saat memproses sampel wajah. Silakan coba lagi.",
       });
+      setSamplingProgress(null);
     } finally {
       setIsSaving(false);
     }
@@ -207,6 +239,7 @@ const FaceEnrollmentModal = ({ isOpen, onClose, onSuccess }) => {
     setPreviewSnapshot(null);
     setCapturedDescriptor(null);
     setFaceDetected(false);
+    setSamplingProgress(null);
     setIsDetecting(true);
   };
 
@@ -267,6 +300,7 @@ const FaceEnrollmentModal = ({ isOpen, onClose, onSuccess }) => {
     setPreviewSnapshot(null);
     setCapturedDescriptor(null);
     setFaceDetected(false);
+    setSamplingProgress(null);
     onClose();
   };
 
@@ -331,17 +365,29 @@ const FaceEnrollmentModal = ({ isOpen, onClose, onSuccess }) => {
               <div className="absolute top-3 inset-x-3 flex justify-center">
                 <div
                   className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-md shadow-sm ${
-                    faceDetected
+                    samplingProgress
+                      ? "bg-blue-600 text-white"
+                      : faceDetected
                       ? "bg-green-500/90 text-white"
                       : "bg-black/60 text-gray-200"
                   }`}
                 >
-                  {faceDetected ? (
-                    <CheckCircle size={14} />
+                  {samplingProgress ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>{samplingProgress}</span>
+                    </>
+                  ) : faceDetected ? (
+                    <>
+                      <CheckCircle size={14} />
+                      <span>{detectionMessage}</span>
+                    </>
                   ) : (
-                    <AlertCircle size={14} />
+                    <>
+                      <AlertCircle size={14} />
+                      <span>{detectionMessage}</span>
+                    </>
                   )}
-                  <span>{detectionMessage}</span>
                 </div>
               </div>
             )}
@@ -349,6 +395,7 @@ const FaceEnrollmentModal = ({ isOpen, onClose, onSuccess }) => {
 
           {/* Guide Tips */}
           <div className="mt-4 text-xs text-gray-500 text-center max-w-sm space-y-1">
+            <p>• Kamera akan merekam 5 sampel otomatis untuk akurasi maksimal.</p>
             <p>• Lepaskan masker atau kacamata gelap saat memindai.</p>
             <p>• Pastikan ruangan memiliki pencahayaan yang cukup.</p>
           </div>
@@ -395,14 +442,22 @@ const FaceEnrollmentModal = ({ isOpen, onClose, onSuccess }) => {
             <button
               type="button"
               onClick={handleCapture}
-              disabled={modelLoading || !faceDetected || isSaving}
+              disabled={modelLoading || !faceDetected || isSaving || samplingProgress}
               className={`px-5 py-2 text-sm font-medium text-white rounded-lg shadow-md transition flex items-center gap-1.5 ${
-                faceDetected && !modelLoading
+                faceDetected && !modelLoading && !samplingProgress
                   ? "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
                   : "bg-gray-300 cursor-not-allowed"
               }`}
             >
-              <Camera size={16} /> Ambil Wajah
+              {samplingProgress ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" /> Merekam...
+                </>
+              ) : (
+                <>
+                  <Camera size={16} /> Ambil Wajah
+                </>
+              )}
             </button>
           )}
         </div>
