@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Camera, Eye, EyeOff, Lock, Check, X } from "lucide-react";
 import { useAuth } from "../../Context/UserContext";
+import FaceEnrollmentModal from "./FaceEnrollmentModal";
+import { ScanFace } from "lucide-react";
 
 const FormUser = () => {
-  const { user, updateProfile, updatePassword } = useAuth();
+  const { user, updateProfile, updatePassword, refreshProfile } = useAuth();
+  const [showFaceModal, setShowFaceModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [showPassword, setShowPassword] = useState({
@@ -204,6 +207,30 @@ const FormUser = () => {
                 <p className="mt-2 text-xs text-center text-gray-500">
                   Format: JPG, JPEG, PNG<br />Maks. 2MB
                 </p>
+                {/* Face Registration Card */}
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-center">
+                  <div className="text-xs font-semibold text-gray-700 mb-1 flex items-center justify-center gap-1.5">
+                    <ScanFace size={15} className="text-blue-600" /> Absensi Wajah
+                  </div>
+                  <div className="mb-2">
+                    {user?.is_face_registered ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        ✓ Terdaftar
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        ! Belum Terdaftar
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFaceModal(true)}
+                    className="w-full py-1.5 px-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition"
+                  >
+                    {user?.is_face_registered ? "Perbarui Wajah" : "Daftarkan Wajah"}
+                  </button>
+                </div>
               </div>
 
               {/* Profile Form */}
@@ -454,6 +481,13 @@ const FormUser = () => {
           {message.text}
         </div>
       )}
+          <FaceEnrollmentModal
+        isOpen={showFaceModal}
+        onClose={() => setShowFaceModal(false)}
+        onSuccess={() => {
+          refreshProfile?.();
+        }}
+      />
     </div>
   );
 };
