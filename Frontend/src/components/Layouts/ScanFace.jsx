@@ -150,8 +150,8 @@ function ScanFace() {
 
               {/* Interactive Verification Prompt */}
               {candidate ? (
-                <div className="w-full mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-center shadow-sm">
-                  <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg mx-auto mb-2 shadow-sm">
+                <div className="w-full mb-6 p-4 bg-white text-black border border-gray rounded-xl text-center shadow-sm">
+                  <div className="w-12 h-12 rounded-full bg-red-600 text-white flex items-center justify-center font-bold text-lg mx-auto mb-2 shadow-sm">
                     {candidate.studentName.charAt(0)}
                   </div>
                   <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">
@@ -191,23 +191,14 @@ function ScanFace() {
               )}
 
               {/* Navigation Actions */}
-              {!candidate && (
-                <div className="flex flex-col gap-3 w-full">
-                  <WhiteButton
-                    variant="w-full text-sm"
-                    onClick={() => navigate("/scan")}
-                  >
-                    Scan QR Code
-                  </WhiteButton>
-
-                  <Button
-                    variant="w-full bg-red-600 hover:bg-red-700 text-sm font-medium"
-                    onClick={() => navigate("/")}
-                  >
-                    Tutup
-                  </Button>
-                </div>
-              )}
+              <div className="flex flex-col gap-3 w-full">
+                <Button
+                  variant="w-full bg-red-600 hover:bg-red-700 text-sm font-medium"
+                  onClick={() => navigate("/")}
+                >
+                  Tutup
+                </Button>
+              </div>
             </div>
           </div>
         </div>
