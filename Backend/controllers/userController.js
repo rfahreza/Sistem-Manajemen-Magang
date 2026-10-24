@@ -5,6 +5,64 @@ const fs = require("fs");
 const responseUtil = require("../utils/response");
 
 const userController = {
+  registerFace: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const { descriptor } = req.body;
+
+      if (!descriptor || !Array.isArray(descriptor) || descriptor.length !== 128) {
+        return res.status(400).json({
+          success: false,
+          message: "Data wajah (descriptor) tidak valid. Harus berupa 128 nilai angka."
+        });
+      }
+
+      const [mhs] = await db.execute("SELECT id FROM mahasiswa WHERE user_id = ?", [userId]);
+      if (mhs.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Data mahasiswa tidak ditemukan"
+        });
+      }
+
+      await db.execute(
+        "UPDATE mahasiswa SET face_descriptor = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [JSON.stringify(descriptor), mhs[0].id]
+      );
+
+      return res.json({
+        success: true,
+        message: "Wajah berhasil didaftarkan"
+      });
+    } catch (error) {
+      console.error("Register face error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan saat mendaftarkan wajah"
+      });
+    }
+  },
+
+  deleteFace: async (req, res) => {
+    try {
+      const userId = req.user.id;
+      await db.execute(
+        "UPDATE mahasiswa SET face_descriptor = NULL, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+        [userId]
+      );
+      return res.json({
+        success: true,
+        message: "Data wajah berhasil dihapus"
+      });
+    } catch (error) {
+      console.error("Delete face error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan saat menghapus data wajah"
+      });
+    }
+  },
+
   // Update getProfile method
   getProfile: async (req, res) => {
     try {
@@ -16,7 +74,7 @@ const userController = {
         query = `SELECT u.email, u.photo_profile, u.role, 
                 m.id, m.nim, m.nama, m.institusi, m.jenis_kelamin, 
                 m.alamat, m.no_telepon, m.tanggal_mulai, m.tanggal_selesai,
-                m.status, m.sisa_hari
+                m.status, m.sisa_hari, (m.face_descriptor IS NOT NULL) AS is_face_registered
          FROM users u
          LEFT JOIN mahasiswa m ON u.id = m.user_id
          WHERE u.id = ?`;

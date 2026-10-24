@@ -73,6 +73,10 @@ router.get('/profileQr', userController.getMahasiswaProfile);
 router.get('/qrcode', userController.getQRCode);
 
 // Profile routes
+// Face Recognition registration
+router.post('/face-register', auth.isMahasiswa, userController.registerFace);
+router.delete('/face', auth.isMahasiswa, userController.deleteFace);
+
 router.get('/profile', (req, res, next) => {
   console.log('GET /profile - User:', req.user);
   next();
