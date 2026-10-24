@@ -17,16 +17,9 @@ const FaceStatusCard = ({ recognizedUser, totalStudents }) => {
               <p className="text-xs text-gray-500">NIM: {recognizedUser.nim || "-"}</p>
             </div>
           </div>
-          <span className="px-2.5 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-            {recognizedUser.confidence}% Cocok
-          </span>
         </div>
       ) : (
-        <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between text-xs text-gray-500">
-          <div className="flex items-center gap-2">
-            <Users size={16} className="text-gray-400" />
-            <span>Mahasiswa Terdaftar: <b className="text-gray-700">{totalStudents}</b></span>
-          </div>
+        <div className=" flex items-center justify-between text-xs text-gray-500">
           <span className="italic">Posisikan wajah tepat di kamera</span>
         </div>
       )}

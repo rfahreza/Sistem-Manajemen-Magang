@@ -30,7 +30,7 @@ const FormLogin = () => {
     try {
       setLoading(true);
       await login(formData.email, formData.password);
-      
+
       const userData = JSON.parse(localStorage.getItem('user'));
       if (userData.role === 'admin') {
         navigate('/dashboard');
@@ -107,7 +107,7 @@ const FormLogin = () => {
             to="/scan-face"
             className="w-full bg-white text-black border border-black py-2 px-4 rounded-md hover:bg-gray-100 transition duration-300 text-center"
           >
-            Absen Pengenalan Wajah
+            Scan Wajah
           </Link>
 
           <Link

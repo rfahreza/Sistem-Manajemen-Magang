@@ -135,7 +135,7 @@ function ScanFace() {
           <div className="max-w-2xl w-full mx-auto justify-center bg-white mb-4 rounded-lg shadow-xl p-8 px-24 pb-10 flex flex-col items-center">
             <div className="max-w-md w-full">
               <h2 className="text-2xl font-semibold text-center mb-8">
-                Scan Wajah Absensi
+                Absensi Wajah
               </h2>
 
               {/* Camera Frame & Canvas Overlay */}
@@ -171,13 +171,13 @@ function ScanFace() {
                       variant="w-full bg-green-600 hover:bg-green-700 text-xs font-semibold py-2"
                       onClick={handleConfirmAttendance}
                     >
-                      Ya, Benar (Absen)
+                      Benar
                     </Button>
                     <WhiteButton
                       variant="w-full text-xs font-semibold py-2"
                       onClick={handleRejectAttendance}
                     >
-                      Bukan Saya (Scan Ulang)
+                      Bukan Saya
                     </WhiteButton>
                   </div>
                 </div>

@@ -60,7 +60,7 @@ const FaceCameraFrame = ({
             {/* Overlay Status Pill */}
             {cooldown ? (
               <div className="absolute bottom-3 bg-black/80 px-3.5 py-1.5 rounded-full text-green-400 font-medium text-xs flex items-center gap-1.5 backdrop-blur-sm border border-green-500/30">
-                <CheckCircle2 size={15} /> Absensi tercatat. Siap berikutnya...
+                <CheckCircle2 size={15} /> Absensi tercatat
               </div>
             ) : isProcessing ? (
               <div className="absolute bottom-3 bg-black/80 px-3.5 py-1.5 rounded-full text-blue-400 font-medium text-xs flex items-center gap-2 backdrop-blur-sm border border-blue-500/30">
